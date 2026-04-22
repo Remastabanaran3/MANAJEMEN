@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>WiraKu - Manajemen Keuangan</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23a855f7'/%3E%3Cpath d='M10 15 L15 25 L20 18 L25 25 L30 12' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='30' cy='12' r='3' fill='white'/%3E%3C/svg%3E">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(226, 232, 240, 0.8);
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #059669;
+            --danger: #dc2626;
+            --nav-bg: rgba(255, 255, 255, 0.8);
+            --shadow-nav: 0 4px 20px rgba(0, 0, 0, 0.03);
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] {
+            /* Tema Gelap Gradasi Ungu Mewah */
+            --bg-gradient: linear-gradient(135deg, #130b29 0%, #3b145e 100%);
+            --text-color: #f8fafc;
+            --text-muted: #cbd5e1;
+            --card-bg: rgba(30, 20, 50, 0.85); 
+            --border-color: rgba(90, 50, 130, 0.4);
+            --primary: #a855f7; 
+            --primary-hover: #c084fc;
+            --success: #34d399;
+            --danger: #f87171;
+            --nav-bg: rgba(19, 11, 41, 0.85);
+            --shadow-nav: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            --shadow-hover: 0 20px 25px -5px rgba(22, 10, 45, 0.8);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+        body { font-family: 'Inter', sans-serif; background: var(--bg-gradient); color: var(--text-color); min-height: 100vh; transition: all 0.4s ease; line-height: 1.6; }
+
+        nav { background-color: var(--nav-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow-nav); }
+
+        .nav-brand { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--primary), #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 10px; }
+        
+        /* Logo Custom SVG */
+        .nav-logo { height: 36px; width: 36px; }
+
+        .nav-menus { display: flex; gap: 10px; align-items: center; }
+        .nav-tab { background: transparent; border: none; font-size: 0.95rem; font-weight: 600; font-family: inherit; cursor: pointer; color: var(--text-muted); padding: 10px 18px; border-radius: 50px; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+        .nav-tab:hover { color: var(--text-color); background-color: rgba(100, 116, 139, 0.1); }
+        .nav-tab.active { background-color: rgba(79, 70, 229, 0.1); color: var(--primary); }
+        [data-theme="dark"] .nav-tab.active { background-color: rgba(168, 85, 247, 0.2); }
+        .btn-theme { padding: 10px; border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; font-size: 1.1rem; }
+
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .page-section { display: none; opacity: 0; transform: translateY(15px); }
+        .page-section.active { display: block; opacity: 1; transform: translateY(0); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 35px; }
+        .card { background-color: var(--card-bg); padding: 28px; border-radius: 20px; box-shadow: var(--shadow-card); border: 1px solid var(--border-color); backdrop-filter: blur(10px); transition: all 0.4s ease; }
+        .card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); border-color: rgba(168, 85, 247, 0.3); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .card h3 { font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-icon { font-size: 1.5rem; opacity: 0.8; }
+        .card h2 { font-size: 2.2rem; font-weight: 800; user-select: text; -webkit-user-select: text; letter-spacing: -0.5px; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-primary { color: var(--primary); }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-group { margin-bottom: 5px; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { display: block; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem; }
+        .form-control { width: 100%; padding: 14px 18px; border: 1.5px solid var(--border-color); border-radius: 12px; background-color: transparent; color: var(--text-color); font-family: inherit; font-size: 1rem; transition: all 0.3s ease; }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15); background-color: var(--card-bg); }
+        
+        button.submit-btn { background-color: var(--primary); color: white; border: none; padding: 16px 24px; border-radius: 12px; cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: 700; margin-top: 15px; transition: all 0.3s ease; display: flex; justify-content: center; gap: 10px; align-items: center; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3); }
+        button.submit-btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4); }
+        button.submit-btn:disabled { background-color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .table-container { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border-color); margin-top: 10px; background-color: transparent; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; background-color: var(--card-bg); user-select: text; -webkit-user-select: text; }
+        th { background-color: rgba(0,0,0,0.02); font-weight: 700; text-transform: uppercase; font-size: 0.85rem; color: var(--text-muted); padding: 18px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        [data-theme="dark"] th { background-color: rgba(255,255,255,0.02); }
+        td { padding: 18px 20px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.95rem; }
+        tbody tr { transition: background-color 0.2s ease; }
+        tbody tr:hover { background-color: rgba(168, 85, 247, 0.05); }
+        tbody tr:last-child td { border-bottom: none; }
+        
+        .badge { padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+        .badge-in { background-color: rgba(5, 150, 105, 0.1); color: var(--success); }
+        .badge-out { background-color: rgba(220, 38, 38, 0.1); color: var(--danger); }
+
+        .chart-container { background-color: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: var(--shadow-card); border: 1px solid var(--border-color); margin-top: 24px; }
+        #loading-indicator { text-align: center; color: var(--primary); font-weight: bold; padding: 20px; display: none; }
+        
+        .action-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn-action { color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-export { background-color: var(--success); box-shadow: 0 4px 10px rgba(5, 150, 105, 0.2); }
+        .btn-export:hover { background-color: #047857; transform: translateY(-2px); }
+        .btn-reset { background-color: var(--danger); box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2); }
+        .btn-reset:hover { background-color: #b91c1c; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-brand">
+            <svg class="nav-logo" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="wiraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#a855f7" />
+                        <stop offset="100%" stop-color="#4f46e5" />
+                    </linearGradient>
+                </defs>
+                <rect width="40" height="40" rx="10" fill="url(#wiraGrad)" />
+                <path d="M10 15 L15 25 L20 18 L25 25 L30 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                <circle cx="30" cy="12" r="3" fill="white" />
+            </svg>
+            WiraKu
+        </div>
+        <div class="nav-menus">
+            <button class="nav-tab active" id="btn-dashboard"><i class="fa-solid fa-chart-pie"></i> Ringkasan</button>
+            <button class="nav-tab" id="btn-data"><i class="fa-solid fa-file-invoice-dollar"></i> Pembukuan</button>
+            <button class="nav-tab btn-theme" id="theme-toggle" title="Ganti Mode Tampilan"><i class="fa-solid fa-moon"></i></button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="page-dashboard" class="page-section active">
+            <div class="summary-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Total Pemasukan</h3>
+                        <i class="fa-solid fa-arrow-trend-up card-icon text-success"></i>
+                    </div>
+                    <h2 id="total-in" class="text-success">Rp 0</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Total Pengeluaran</h3>
+                        <i class="fa-solid fa-arrow-trend-down card-icon text-danger"></i>
+                    </div>
+                    <h2 id="total-out" class="text-danger">Rp 0</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Laba Bersih</h3>
+                        <i class="fa-solid fa-sack-dollar card-icon text-primary"></i>
+                    </div>
+                    <h2 id="net-profit">Rp 0</h2>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px; color: var(--text-muted);"><i class="fa-solid fa-chart-column"></i> Grafik Arus Kas</h3>
+                <canvas id="financeChart"></canvas>
+            </div>
+        </div>
+
+        <div id="page-data" class="page-section">
+            <div class="summary-cards">
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 20px;"><i class="fa-solid fa-square-plus text-primary"></i> Tambah Catatan Baru</h2>
+                    <form id="tx-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label><i class="fa-regular fa-calendar-days"></i> Tanggal Transaksi</label>
+                                <input type="date" class="form-control" id="tx-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-right-left"></i> Jenis Arus Kas</label>
+                                <select class="form-control" id="tx-type" required>
+                                    <option value="pemasukan">📈 Pemasukan</option>
+                                    <option value="pengeluaran">📉 Pengeluaran</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label><i class="fa-solid fa-tag"></i> Keterangan</label>
+                                <input type="text" class="form-control" id="tx-desc" placeholder="Contoh: Penjualan produk A, Bayar listrik bulanan..." required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label><i class="fa-solid fa-rupiah-sign"></i> Nominal Transfer (Rp)</label>
+                                <input type="number" class="form-control" id="tx-amount" placeholder="0" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-btn" id="btn-submit">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Database
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 0; background: transparent; box-shadow: none; border: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; padding: 0 10px;">
+                    <h2 style="font-size: 1.5rem;"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Transaksi</h2>
+                    <div class="action-buttons">
+                        <button id="btn-export" class="btn-action btn-export"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+                        <button id="btn-reset" class="btn-action btn-reset"><i class="fa-solid fa-trash-can"></i> Hapus Semua</button>
+                    </div>
+                </div>
+                
+                <div id="loading-indicator"><i class="fa-solid fa-circle-notch fa-spin"></i> Sinkronisasi ke Cloud...</div>
+                
+                <div class="table-container">
+                    <table id="tx-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Rincian</th>
+                                <th>Kategori</th>
+                                <th style="text-align: right;">Nominal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCzy1mn0CgB-FQUFDD-Jkw8r9NrEJCsIxs",
+            authDomain: "manajemen-4a6dd.firebaseapp.com",
+            databaseURL: "https://manajemen-4a6dd-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "manajemen-4a6dd",
+            storageBucket: "manajemen-4a6dd.firebasestorage.app",
+            messagingSenderId: "776300112072",
+            appId: "1:776300112072:web:29c74702330cfec61c9dfd",
+            measurementId: "G-15ENCDZ4JR"
+        };
+
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const database = firebase.database();
+        const transactionsRef = database.ref('transactions');
+
+        // --- TEMA GELAP/TERANG ---
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        
+        themeToggle.addEventListener('click', () => {
+            if (htmlElement.getAttribute('data-theme') === 'light') { 
+                htmlElement.setAttribute('data-theme', 'dark'); 
+                themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>'; 
+            } else { 
+                htmlElement.setAttribute('data-theme', 'light'); 
+                themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>'; 
+            }
+            updateChart();
+        });
+
+        // --- NAVIGASI ---
+        const btnDashboard = document.getElementById('btn-dashboard');
+        const btnData = document.getElementById('btn-data');
+        const pageDashboard = document.getElementById('page-dashboard');
+        const pageData = document.getElementById('page-data');
+
+        function switchPage(page) {
+            btnDashboard.classList.remove('active'); btnData.classList.remove('active');
+            pageDashboard.classList.remove('active'); pageData.classList.remove('active');
+            if(page === 'dashboard') { btnDashboard.classList.add('active'); pageDashboard.classList.add('active'); } 
+            else { btnData.classList.add('active'); pageData.classList.add('active'); }
+        }
+
+        btnDashboard.addEventListener('click', () => switchPage('dashboard'));
+        btnData.addEventListener('click', () => switchPage('data'));
+
+        // --- LOGIKA DATA ---
+        let transactions = [];
+        let financeChart;
+
+        const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        const formatDateDisplay = (dateString) => new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        function updateDashboard() {
+            let totalIn = 0, totalOut = 0;
+            const tbody = document.querySelector('#tx-table tbody');
+            tbody.innerHTML = '';
+
+            transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            transactions.forEach(tx => {
+                if (tx.type === 'pemasukan') totalIn += tx.amount; else totalOut += tx.amount;
+                
+                const badgeClass = tx.type === 'pemasukan' ? 'badge-in' : 'badge-out';
+                const badgeText = tx.type === 'pemasukan' ? 'Masuk' : 'Keluar';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="white-space: nowrap; color: var(--text-muted); font-weight: 500;">${formatDateDisplay(tx.date)}</td>
+                    <td><strong style="color: var(--text-color);">${tx.desc}</strong></td>
+                    <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                    <td style="text-align: right; font-weight: 700; font-family: monospace; font-size: 1.05rem;" class="${tx.type === 'pemasukan' ? 'text-success' : 'text-danger'}">
+                        ${tx.type === 'pemasukan' ? '+' : '-'}${formatRupiah(tx.amount)}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const netProfit = totalIn - totalOut;
+            document.getElementById('total-in').textContent = formatRupiah(totalIn);
+            document.getElementById('total-out').textContent = formatRupiah(totalOut);
+            
+            const netEl = document.getElementById('net-profit');
+            netEl.textContent = formatRupiah(netProfit);
+            netEl.className = netProfit >= 0 ? 'text-success' : 'text-danger';
+
+            updateChart();
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            const isDark = htmlElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            
+            let monthlyData = {};
+            
+            transactions.forEach(tx => {
+                const dateObj = new Date(tx.date);
+                const monthKey = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0');
+                const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+                
+                if(!monthlyData[monthKey]) monthlyData[monthKey] = { label: monthLabel, in: 0, out: 0 };
+                if(tx.type === 'pemasukan') monthlyData[monthKey].in += tx.amount;
+                else monthlyData[monthKey].out += tx.amount;
+            });
+
+            const sortedKeys = Object.keys(monthlyData).sort();
+            const labels = sortedKeys.map(k => monthlyData[k].label);
+            const inData = sortedKeys.map(k => monthlyData[k].in);
+            const outData = sortedKeys.map(k => monthlyData[k].out);
+
+            if(financeChart) financeChart.destroy();
+
+            financeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length > 0 ? labels : ['Belum ada data'],
+                    datasets: [
+                        { label: 'Pemasukan', data: inData.length > 0 ? inData : [0], backgroundColor: '#059669', borderRadius: 6 },
+                        { label: 'Pengeluaran', data: outData.length > 0 ? outData : [0], backgroundColor: '#dc2626', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: textColor, font: { family: 'Inter', weight: 600 } } } },
+                    scales: {
+                        y: { ticks: { color: textColor, font: { family: 'Inter' } }, grid: { color: gridColor, borderDash: [5, 5] }, border: { display: false } },
+                        x: { ticks: { color: textColor, font: { family: 'Inter' } }, grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('tx-date').valueAsDate = new Date();
+
+        // --- SIMPAN KE CLOUD ---
+        document.getElementById('tx-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btnSubmit = document.getElementById('btn-submit');
+            const originalHTML = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...';
+            btnSubmit.disabled = true;
+
+            transactionsRef.push({
+                date: document.getElementById('tx-date').value,
+                type: document.getElementById('tx-type').value,
+                desc: document.getElementById('tx-desc').value,
+                amount: parseFloat(document.getElementById('tx-amount').value),
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                document.getElementById('tx-amount').value = '';
+                document.getElementById('tx-desc').value = '';
+                btnSubmit.innerHTML = originalHTML; btnSubmit.disabled = false;
+            }).catch(err => {
+                alert("Gagal menyimpan: " + err.message);
+                btnSubmit.innerHTML = originalHTML; btnSubmit.disabled = false;
+            });
+        });
+
+        // --- TARIK DATA (REAL-TIME) ---
+        const loadingIndicator = document.getElementById('loading-indicator');
+        loadingIndicator.style.display = 'block';
+
+        transactionsRef.on('value', (snapshot) => {
+            transactions = []; 
+            snapshot.forEach((child) => {
+                const data = child.val();
+                transactions.push({ id: child.key, date: data.date, type: data.type, desc: data.desc, amount: data.amount });
+            });
+            loadingIndicator.style.display = 'none';
+            updateDashboard();
+        });
+
+        // --- EXPORT & RESET ---
+        document.getElementById('btn-export').addEventListener('click', function() {
+            if (transactions.length === 0) return alert("Belum ada data untuk diekspor!");
+            let csvContent = "Tanggal Transaksi,Bulan/Tahun,Keterangan,Jenis Transaksi,Nominal (Rp)\n";
+            transactions.forEach(row => { 
+                const monthLabel = new Date(row.date).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                csvContent += `${row.date},${monthLabel},"${row.desc}",${row.type},${row.amount}\n`; 
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "Rekap_Keuangan_WiraKu.csv";
+            link.click();
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', function() {
+            if (transactions.length === 0) return alert("Database sudah kosong.");
+            if (confirm("PERINGATAN!\n\nApakah Anda yakin ingin menghapus SEMUA data transaksi?\nPastikan Anda sudah mengunduh data ke Excel.")) {
+                const btnReset = document.getElementById('btn-reset');
+                btnReset.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menghapus...';
+                btnReset.disabled = true;
+                transactionsRef.remove().then(() => {
+                    btnReset.innerHTML = '<i class="fa-solid fa-trash-can"></i> Hapus Semua';
+                    btnReset.disabled = false;
+                }).catch(err => {
+                    alert("Gagal menghapus: " + err.message);
+                    btnReset.innerHTML = '<i class="fa-solid fa-trash-can"></i> Hapus Semua';
+                    btnReset.disabled = false;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
